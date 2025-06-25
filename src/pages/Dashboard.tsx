@@ -173,11 +173,11 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
+        <h2 className="text-3xl font-bold text-white">
+          Welcome back, {user?.username}!
+        </h2>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome back, {user?.username}!
-            </h1>
             <p className="text-gray-300">
               Manage your AI conversations and collaborations
             </p>
@@ -189,8 +189,8 @@ export const Dashboard: React.FC = () => {
               onClick={handleOpenCreateModal}
               className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              New Chat
+              <Plus className="h-5 w-5 md:mr-2" />
+              <span className='hidden md:inline-block'>New Chat</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -198,8 +198,8 @@ export const Dashboard: React.FC = () => {
               onClick={handleLogout}
               className="inline-flex items-center px-4 py-2 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all border border-white/20"
             >
-              <LogOut className="h-5 w-5 mr-2" />
-              Logout
+              <LogOut className="h-5 w-5 md:mr-2" />
+              <span className='hidden md:inline-block'>Logout</span>
             </motion.button>
           </div>
         </div>
