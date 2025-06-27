@@ -56,11 +56,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({
 
   const messageClasses = useMemo(() => {
     return `
-      p-4 rounded-2xl backdrop-blur-sm border transition-all w-full max-w-[calc(100%-3rem)]
+      p-4 rounded-2xl backdrop-blur-sm border transition-all w-fit max-w-[calc(100%-3rem)]
       ${isSelected ? 'ring-2 ring-blue-500' : ''}
       ${isAI
         ? 'bg-white/5 border-white/10 rounded-tl-sm'
-        : 'bg-gradient-to-r from-blue-500/20 to-purple-600/20 border-blue-500/30 rounded-tr-sm'
+        : 'bg-gradient-to-r from-blue-500/20 to-purple-600/20 border-blue-500/30 rounded-tr-sm'}
       }
     `;
   }, [isAI, isSelected]);
