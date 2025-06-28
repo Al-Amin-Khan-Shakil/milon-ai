@@ -4,6 +4,12 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import dotenv from 'dotenv';
+
+// Load environment variables in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 export const PublicChat: React.FC = () => {
   const { publicLink } = useParams<{ publicLink: string }>();
@@ -12,10 +18,13 @@ export const PublicChat: React.FC = () => {
   const [isJoining, setIsJoining] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Define API base URL
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
+
   useEffect(() => {
     const joinPublicChat = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/chat/public/${publicLink}/join`, {
+        const response = await fetch(`${API_URL}/chat/public/${publicLink}/join`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -47,7 +56,7 @@ export const PublicChat: React.FC = () => {
       setIsJoining(false);
       setError('Authentication required or invalid link');
     }
-  }, [publicLink, token, navigate]);
+  }, [publicLink, token, navigate, API_URL]);
 
   if (isJoining) {
     return (

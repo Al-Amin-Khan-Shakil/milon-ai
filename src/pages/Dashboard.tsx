@@ -7,6 +7,12 @@ import { toast } from 'react-hot-toast';
 import { CreateChatModal } from '../components/CreateChatModal';
 import { ChatList } from '../components/ChatList';
 import BoltBadge from '../assets/white_circle_360x360.png';
+import dotenv from 'dotenv';
+
+// Load environment variables in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 interface Chat {
   id: number;
@@ -41,11 +47,11 @@ const TabButton = memo<{
     <tab.icon className="h-5 w-5 mr-2" />
     {tab.label}
     {tab.count > 0 && (
-      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-        isActive
-          ? 'bg-white/20'
-          : 'bg-white/10'
-      }`}>
+      <span
+        className={`ml-2 px-2 py-1 text-xs rounded-full ${
+          isActive ? 'bg-white/20' : 'bg-white/10'
+        }`}
+      >
         {tab.count}
       </span>
     )}
@@ -65,17 +71,23 @@ export const Dashboard: React.FC = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
 
-  const headers = useMemo(() => ({
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }), [token]);
+  // Define API base URL
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
+
+  const headers = useMemo(
+    () => ({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }),
+    [token]
+  );
 
   const fetchChats = useCallback(async () => {
     try {
       const [myChatsRes, sharedChatsRes, publicChatsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/chat/my-chats', { headers }),
-        fetch('http://localhost:3001/api/chat/shared-with-me', { headers }),
-        fetch('http://localhost:3001/api/chat/joined-public', { headers })
+        fetch(`${API_URL}/chat/my-chats`, { headers }),
+        fetch(`${API_URL}/chat/shared-with-me`, { headers }),
+        fetch(`${API_URL}/chat/joined-public`, { headers }),
       ]);
 
       if (myChatsRes.ok) {
@@ -94,6 +106,7 @@ export const Dashboard: React.FC = () => {
       }
     } catch (error) {
       toast.error('Failed to fetch chats');
+      console.error('Fetch chats error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -103,35 +116,42 @@ export const Dashboard: React.FC = () => {
     fetchChats();
   }, [fetchChats]);
 
-  const handleCreateChat = useCallback(async (title: string) => {
-    try {
-      const response = await fetch('http://localhost:3001/api/chat/create', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ title })
-      });
+  const handleCreateChat = useCallback(
+    async (title: string) => {
+      try {
+        const response = await fetch(`${API_URL}/chat/create`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title }),
+        });
 
-      if (response.ok) {
-        const newChat = await response.json();
-        setMyChats(prev => [newChat, ...prev]);
-        toast.success('Chat created successfully!');
-        navigate(`/chat/${newChat.id}`);
-      } else {
+        if (response.ok) {
+          const newChat = await response.json();
+          setMyChats((prev) => [newChat, ...prev]);
+          toast.success('Chat created successfully!');
+          navigate(`/chat/${newChat.id}`);
+        } else {
+          toast.error('Failed to create chat');
+        }
+      } catch (error) {
         toast.error('Failed to create chat');
+        console.error('Create chat error:', error);
       }
-    } catch (error) {
-      toast.error('Failed to create chat');
-    }
-  }, [headers, navigate]);
+    },
+    [headers, navigate]
+  );
 
   const handleLogout = useCallback(() => {
     logout();
     toast.success('Logged out successfully');
   }, [logout]);
 
-  const handleChatClick = useCallback((chatId: number) => {
-    navigate(`/chat/${chatId}`);
-  }, [navigate]);
+  const handleChatClick = useCallback(
+    (chatId: number) => {
+      navigate(`/chat/${chatId}`);
+    },
+    [navigate]
+  );
 
   const handleTabClick = useCallback((tabId: TabType) => {
     setActiveTab(tabId);
@@ -145,18 +165,35 @@ export const Dashboard: React.FC = () => {
     setIsCreateModalOpen(false);
   }, []);
 
-  const tabs = useMemo(() => [
-    { id: 'my', label: 'My Chats', icon: MessageCircle, count: myChats.length },
-    { id: 'shared', label: 'Shared With Me', icon: Share2, count: sharedChats.length },
-    { id: 'public', label: 'Joined Public', icon: Users, count: publicChats.length }
-  ], [myChats.length, sharedChats.length, publicChats.length]);
+  const tabs = useMemo(
+    () => [
+      { id: 'my', label: 'My Chats', icon: MessageCircle, count: myChats.length },
+      {
+        id: 'shared',
+        label: 'Shared With Me',
+        icon: Share2,
+        count: sharedChats.length,
+      },
+      {
+        id: 'public',
+        label: 'Joined Public',
+        icon: Users,
+        count: publicChats.length,
+      },
+    ],
+    [myChats.length, sharedChats.length, publicChats.length]
+  );
 
   const getCurrentChats = useCallback(() => {
     switch (activeTab) {
-      case 'my': return myChats;
-      case 'shared': return sharedChats;
-      case 'public': return publicChats;
-      default: return myChats;
+      case 'my':
+        return myChats;
+      case 'shared':
+        return sharedChats;
+      case 'public':
+        return publicChats;
+      default:
+        return myChats;
     }
   }, [activeTab, myChats, sharedChats, publicChats]);
 
@@ -172,9 +209,18 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      <div className='absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50'>
-        <a href="https://bolt.new/" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
-          <img src={BoltBadge} alt="Bolt Badge" className="h-16 w-16 md:h-24 md:w-24" />
+      <div className="absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50">
+        <a
+          href="https://bolt.new/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cursor-pointer"
+        >
+          <img
+            src={BoltBadge}
+            alt="Bolt Badge"
+            className="h-16 w-16 md:h-24 md:w-24"
+          />
         </a>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -196,7 +242,7 @@ export const Dashboard: React.FC = () => {
               className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
             >
               <Plus className="h-5 w-5 md:mr-2" />
-              <span className='hidden md:inline-block'>New Chat</span>
+              <span className="hidden md:inline-block">New Chat</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -205,7 +251,7 @@ export const Dashboard: React.FC = () => {
               className="inline-flex items-center px-4 py-2 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all border border-white/20"
             >
               <LogOut className="h-5 w-5 md:mr-2" />
-              <span className='hidden md:inline-block'>Logout</span>
+              <span className="hidden md:inline-block">Logout</span>
             </motion.button>
           </div>
         </div>
