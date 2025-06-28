@@ -1,453 +1,418 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Send, Share2, Copy, Check } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useSocket } from '../contexts/SocketContext';
-import { toast } from 'react-hot-toast';
-import { MessageBubble } from '../components/MessageBubble';
-import { ShareModal } from '../components/ShareModal';
+import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import { pool } from '../database/init.js';
+import axios from 'axios';
 
-interface Message {
-  id: number;
-  content: string;
-  message_type: 'user' | 'ai';
-  username: string;
-  user_id: number;
-  created_at: string;
-  context_messages?: string[];
-}
+const router = express.Router();
 
-interface Chat {
-  id: number;
-  title: string;
-  owner_id: number;
-  is_public: boolean;
-  public_link: string;
-  owner_username: string;
-}
+// Create new chat
+router.post('/create', async (req, res) => {
+  try {
+    const { title } = req.body;
+    const userId = req.user.userId;
 
-interface TypingUser {
-  userId: number;
-  username: string;
-  isTyping: boolean;
-}
+    const result = await pool.query(
+      'INSERT INTO chats (title, owner_id) VALUES ($1, $2) RETURNING *',
+      [title || 'New Chat', userId]
+    );
 
-const MessageList = memo<{
-  messages: Message[];
-  selectedMessages: number[];
-  onToggleMessageSelection: (messageId: number) => void;
-}>(({ messages, selectedMessages, onToggleMessageSelection }) => {
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {messages.map((message) => (
-        <MessageBubble
-          key={message.id}
-          message={message}
-          isSelected={selectedMessages.includes(message.id)}
-          onToggleSelect={() => onToggleMessageSelection(message.id)}
-          showSelection={true}
-        />
-      ))}
-    </div>
-  );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Create chat error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-MessageList.displayName = 'MessageList';
+// Get user's chats
+router.get('/my-chats', async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-export const Chat: React.FC = () => {
-  const { chatId } = useParams<{ chatId: string }>();
-  const navigate = useNavigate();
-  const { state } = useLocation();
-  const { user, token } = useAuth();
-  const { socket } = useSocket();
-
-  const [chat, setChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [selectedMessages, setSelectedMessages] = useState<number[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [publicLink, setPublicLink] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const sendMessageTriggered = useRef(false);
-
-  // Define API base URL
-  const API_URL = process.env.REACT_APP_API_URL || '/api';
-
-  const headers = useMemo(() => ({
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }), [token]);
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  const isOwner = useMemo(() => chat?.owner_id === user?.id, [chat?.owner_id, user?.id]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  useEffect(() => {
-    if (chatId && socket) {
-      socket.emit('join-chat', chatId);
-
-      const handleMessageReceived = (message: Message) => {
-        // Only add if it's not from the current user
-        if (message.user_id !== user?.id && !messages.some(m => m.id === message.id)) {
-          setMessages(prev => [...prev, message]);
-        }
-      };
-
-      const handleUserTyping = ({ userId, username, isTyping }: TypingUser) => {
-        setTypingUsers(prev => {
-          const existingUserIndex = prev.findIndex(u => u.userId === userId);
-          if (existingUserIndex !== -1) {
-            return prev.map((u, index) =>
-              index === existingUserIndex ? { ...u, isTyping } : u
-            );
-          } else if (isTyping) {
-            return [...prev, { userId, username, isTyping }];
-          }
-          return prev;
-        });
-      };
-
-      socket.on('message-received', handleMessageReceived);
-      socket.on('user-typing', handleUserTyping);
-
-      return () => {
-        socket.emit('leave-chat', chatId);
-        socket.off('message-received', handleMessageReceived);
-        socket.off('user-typing', handleUserTyping);
-      };
-    }
-  }, [chatId, socket, user?.id]);
-
-  const fetchChatData = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/chat/${chatId}`, {
-        headers
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setChat(data.chat);
-        setMessages(data.messages);
-        setPublicLink(data.chat.public_link || '');
-      } else {
-        toast.error('Failed to load chat');
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      toast.error('Failed to load chat');
-      navigate('/dashboard');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [chatId, headers, navigate]);
-
-  useEffect(() => {
-    if (chatId) {
-      if (state?.title && state?.ownerUsername) {
-        setChat({
-          id: parseInt(chatId),
-          title: state.title,
-          owner_id: user?.id || 0, // Placeholder, fetch real owner_id if needed
-          is_public: true,
-          public_link: '',
-          owner_username: state.ownerUsername,
-        });
-        fetchChatData(); // Still fetch to get full data
-      } else {
-        fetchChatData();
-      }
-    }
-  }, [fetchChatData, chatId, state]);
-
-  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || isSending || sendMessageTriggered.current) return;
-
-    sendMessageTriggered.current = true;
-    setIsSending(true);
-
-    try {
-      const contextMessages = selectedMessages.map(id => {
-        const msg = messages.find(m => m.id === id);
-        return msg ? `${msg.username}: ${msg.content}` : '';
-      }).filter(Boolean);
-
-      const response = await fetch(`${API_URL}/chat/${chatId}/message`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          content: newMessage,
-          contextMessageIds: contextMessages.length > 0 ? selectedMessages : []
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const messagesWithUsernames = [
-          { ...data.userMessage, username: user?.username || 'Anonymous' },
-          ...(data.aiMessage ? [{ ...data.aiMessage, username: 'AI Assistant' }] : [])
-        ];
-
-        // Update state with new messages from API (primary source)
-        setMessages(prev => {
-          const updatedMessages = [...prev, ...messagesWithUsernames];
-          return updatedMessages.filter((msg, index, self) =>
-            index === self.findIndex(m => m.id === msg.id)
-          ); // Deduplicate by ID
-        });
-
-        if (socket) {
-          messagesWithUsernames.forEach(msg => {
-            socket.emit('new-message', {
-              chatId,
-              message: {
-                ...msg,
-                username: user?.username || 'Anonymous'
-              }
-            });
-          });
-        }
-
-        setNewMessage('');
-        setSelectedMessages([]);
-      } else {
-        toast.error('Failed to send message');
-      }
-    } catch (error) {
-      toast.error('Failed to send message');
-      console.error('Send message error:', error);
-    } finally {
-      setIsSending(false);
-      sendMessageTriggered.current = false; // Reset flag
-    }
-  }, [newMessage, isSending, selectedMessages, messages, chatId, headers, user?.username, socket]);
-
-  const handleGeneratePublicLink = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/chat/${chatId}/public-link`, {
-        method: 'POST',
-        headers
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPublicLink(data.publicLink);
-        toast.success('Public link generated!');
-      } else {
-        toast.error('Failed to generate public link');
-      }
-    } catch (error) {
-      toast.error('Failed to generate public link');
-    }
-  }, [chatId, headers]);
-
-  const handleShareWithEmails = useCallback(async (emails: string[]) => {
-    try {
-      const response = await fetch(`${API_URL}/chat/${chatId}/share`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ emails })
-      });
-
-      if (response.ok) {
-        toast.success('Chat shared successfully!');
-      } else {
-        toast.error('Failed to share chat');
-      }
-    } catch (error) {
-      toast.error('Failed to share chat');
-    }
-  }, [chatId, headers]);
-
-  const copyPublicLink = useCallback(() => {
-    const fullLink = `${window.location.origin}/public/${publicLink}`;
-    navigator.clipboard.writeText(fullLink);
-    setCopied(true);
-    toast.success('Link copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
-  }, [publicLink]);
-
-  const toggleMessageSelection = useCallback((messageId: number) => {
-    setSelectedMessages(prev =>
-      prev.includes(messageId)
-        ? prev.filter(id => id !== messageId)
-        : [...prev, messageId]
+    const result = await pool.query(
+      `SELECT c.*,
+        (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
+        (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
+       FROM chats c
+       WHERE c.owner_id = $1
+       ORDER BY c.updated_at DESC`,
+      [userId]
     );
-  }, []);
 
-  const handleBackToDashboard = useCallback(() => {
-    navigate('/dashboard');
-  }, [navigate]);
-
-  const handleOpenShareModal = useCallback(() => {
-    setIsShareModalOpen(true);
-  }, []);
-
-  const handleCloseShareModal = useCallback(() => {
-    setIsShareModalOpen(false);
-  }, []);
-
-  const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNewMessage(e.target.value);
-    if (socket && chatId) {
-      socket.emit('typing-start', chatId);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      typingTimeoutRef.current = setTimeout(() => {
-        socket.emit('typing-stop', chatId);
-      }, 2000);
-    }
-  }, [socket, chatId]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e as any);
-      if (socket && chatId) {
-        socket.emit('typing-stop', chatId);
-      }
-    }
-  }, [handleSendMessage, socket, chatId]);
-
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get my chats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
+});
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <button
-              onClick={handleBackToDashboard}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors mr-4"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-400" />
-            </button>
-            <div>
-              <h1 className="text-xl font-semibold text-white">{chat?.title || 'Loading...'}</h1>
-              <p className="text-sm text-gray-400">
-                by {chat?.owner_username || 'Unknown'}
-                {selectedMessages.length > 0 && (
-                  <span className="ml-2 px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs">
-                    {selectedMessages.length} selected for context
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
+// Get shared chats
+router.get('/shared-with-me', async (req, res) => {
+  try {
+    const userEmail = req.user.email;
 
-          {isOwner && (
-            <div className="flex items-center space-x-2">
-              {publicLink && (
-                <button
-                  onClick={copyPublicLink}
-                  className="flex items-center px-3 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors"
-                >
-                  {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                  {copied ? <span className='hidden md:inline-block'>Copied!</span> : <span className='hidden md:inline-block'>Copy Link</span>}
-                </button>
-              )}
-              <button
-                onClick={handleOpenShareModal}
-                className="flex items-center px-3 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors"
-              >
-                <Share2 className="h-4 w-4 mr-1" />
-                <span className='hidden md:inline-block'>Share</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+    const result = await pool.query(
+      `SELECT c.*, u.username as owner_username,
+        (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
+        (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
+       FROM chats c
+       JOIN chat_shares cs ON c.id = cs.chat_id
+       JOIN users u ON c.owner_id = u.id
+       WHERE cs.shared_with_email = $1
+       ORDER BY c.updated_at DESC`,
+      [userEmail]
+    );
 
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <MessageList
-          messages={messages}
-          selectedMessages={selectedMessages}
-          onToggleMessageSelection={toggleMessageSelection}
-        />
-        {typingUsers.filter(u => u.isTyping && u.userId !== user?.id).length > 0 && (
-          <div className="max-w-4xl mx-auto mt-4 text-gray-400 text-sm flex items-center">
-            <span>
-              {typingUsers
-                .filter(u => u.isTyping && u.userId !== user?.id)
-                .map(u => u.username)
-                .join(', ')} {typingUsers.filter(u => u.isTyping && u.userId !== user?.id).length > 1 ? 'are' : 'is'} typing
-            </span>
-            <span className="ml-1 flex space-x-1">
-              <span className="animate-bounce">.</span>
-              <span className="animate-bounce delay-100">.</span>
-              <span className="animate-bounce delay-200">.</span>
-            </span>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get shared chats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
-      <div className="bg-white/5 backdrop-blur-sm border-t border-white/10 px-4 py-4">
-        <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSendMessage} className="flex space-x-4">
-            <div className="flex-1 relative">
-              <textarea
-                value={newMessage}
-                onChange={handleMessageChange}
-                placeholder="Type your message..."
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                rows={1}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              disabled={!newMessage.trim() || isSending}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {isSending ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </motion.button>
-          </form>
-        </div>
-      </div>
+// Get joined public chats
+router.get('/joined-public', async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-      <ShareModal
-        isOpen={isShareModalOpen}
-        onClose={handleCloseShareModal}
-        onGeneratePublicLink={handleGeneratePublicLink}
-        onShareWithEmails={handleShareWithEmails}
-        publicLink={publicLink}
-        hasPublicLink={!!publicLink}
-      />
-    </div>
-  );
-};
+    const result = await pool.query(
+      `SELECT c.*, u.username as owner_username,
+        (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
+        (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
+       FROM chats c
+       JOIN chat_participants cp ON c.id = cp.chat_id
+       JOIN users u ON c.owner_id = u.id
+       WHERE cp.user_id = $1 AND c.owner_id != $1 AND c.is_public = true
+       ORDER BY c.updated_at DESC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get joined public chats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get chat details
+router.get('/:chatId', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+
+    // Check access permissions
+    const accessCheck = await pool.query(
+      `SELECT c.*, u.username as owner_username
+       FROM chats c
+       JOIN users u ON c.owner_id = u.id
+       WHERE c.id = $1 AND (
+         c.owner_id = $2 OR
+         c.is_public = true OR
+         EXISTS (SELECT 1 FROM chat_shares WHERE chat_id = $1 AND shared_with_email = $3)
+       )`,
+      [chatId, userId, userEmail]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get messages with user information
+    const messages = await pool.query(
+      `SELECT m.*, u.username
+       FROM messages m
+       JOIN users u ON m.user_id = u.id
+       WHERE m.chat_id = $1
+       ORDER BY m.created_at ASC`,
+      [chatId]
+    );
+
+    res.json({
+      chat: accessCheck.rows[0],
+      messages: messages.rows
+    });
+  } catch (error) {
+    console.error('Get chat error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send message
+router.post('/:chatId/message', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { content, contextMessageIds = [] } = req.body;
+    const userId = req.user.userId;
+    const userEmail = req.user.email;
+
+    // Validate input
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: 'Invalid content' });
+    }
+
+    if (!Array.isArray(contextMessageIds)) {
+      return res.status(400).json({ error: 'contextMessageIds must be an array' });
+    }
+
+    // Fetch username
+    const userResult = await pool.query(
+      'SELECT username FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const currentUsername = userResult.rows[0].username;
+
+    // Check access permissions
+    const accessCheck = await pool.query(
+      `SELECT * FROM chats c
+       WHERE c.id = $1 AND (
+         c.owner_id = $2 OR
+         c.is_public = true OR
+         EXISTS (SELECT 1 FROM chat_shares WHERE chat_id = $1 AND shared_with_email = $3)
+       )`,
+      [chatId, userId, userEmail]
+    );
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Add user to participants if not already
+    await pool.query(
+      'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [chatId, userId]
+    );
+
+    // Fetch context messages
+    let contextMessages = [];
+    let contextResult;
+
+    if (contextMessageIds.length > 0) {
+
+      // Fetch specific messages by IDs
+      contextResult = await pool.query(
+        `SELECT m.content, u.username
+         FROM messages m
+         JOIN users u ON m.user_id = u.id
+         WHERE m.chat_id = $1 AND m.id = ANY($2::uuid[])
+         ORDER BY m.created_at ASC`,
+        [chatId, contextMessageIds]
+      );
+
+      contextMessages = contextResult.rowCount > 0
+        ? contextResult.rows.map(row => `${row.username}: ${row.content}`)
+        : [];
+    } else {
+
+      // Fetch last 12 messages
+      contextResult = await pool.query(
+        `SELECT m.content, u.username
+         FROM messages m
+         JOIN users u ON m.user_id = u.id
+         WHERE m.chat_id = $1
+         ORDER BY m.created_at DESC
+         LIMIT 12`,
+        [chatId]
+      );
+
+      // Reverse to maintain chronological order
+      contextMessages = contextResult.rowCount > 0
+        ? contextResult.rows.map(row => `${row.username}: ${row.content}`).reverse()
+        : [];
+    }
+
+    // Analyze context for different users
+    let contextNote = '';
+    if (contextMessages.length > 0 && contextResult.rowCount > 0) {
+      const contextUsernames = [...new Set(contextResult.rows.map(row => row.username))]; // Unique usernames
+      const otherUsers = contextUsernames.filter(username => username !== currentUsername);
+      if (otherUsers.length > 0) {
+        contextNote = `\nNote: The context includes messages from other users: ${otherUsers.join(', ')}. Mention specific users in your response only when necessary for clarity or relevance, based on the user's intent.`;
+      }
+    }
+
+    // Save user message
+    const userMessage = await pool.query(
+      'INSERT INTO messages (chat_id, user_id, content, context_messages) VALUES ($1, $2, $3, $4) RETURNING *',
+      [chatId, userId, content, contextMessages]
+    );
+
+    // Generate AI response
+    try {
+      // Structure the prompt for Google AI
+      const contents = [
+        {
+          parts: [
+            {
+              text: contextMessages.length > 0
+                ? `Context:\n${contextMessages.join('\n\n')}${contextNote}\n\n${currentUsername} asks: ${content}`
+                : `${currentUsername} asks: ${content}`
+            }
+          ]
+        }
+      ];
+
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
+        { contents },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      const aiResponse = response.data.candidates[0].content.parts[0].text;
+
+      // Save AI response
+      const aiMessage = await pool.query(
+        'INSERT INTO messages (chat_id, user_id, content, message_type) VALUES ($1, $2, $3, $4) RETURNING *',
+        [chatId, userId, aiResponse, 'ai']
+      );
+
+      // Update chat timestamp
+      await pool.query(
+        'UPDATE chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [chatId]
+      );
+
+      // Fetch usernames for response
+      const userMessageWithUsername = {
+        ...userMessage.rows[0],
+        username: currentUsername
+      };
+      const aiMessageWithUsername = {
+        ...aiMessage.rows[0],
+        username: currentUsername
+      };
+
+      res.json({
+        userMessage: userMessageWithUsername,
+        aiMessage: aiMessageWithUsername
+      });
+    } catch (aiError) {
+      console.error('AI generation error:', aiError.response?.data || aiError.message, aiError.stack);
+      const errorMessage = await pool.query(
+        'INSERT INTO messages (chat_id, user_id, content, message_type) VALUES ($1, $2, $3, $4) RETURNING *',
+        [chatId, userId, 'I apologize, but I encountered an error generating a response. Please check your Google AI API configuration.', 'ai']
+      );
+
+      res.json({
+        userMessage: { ...userMessage.rows[0], username: currentUsername },
+        aiMessage: { ...errorMessage.rows[0], username: currentUsername }
+      });
+    }
+  } catch (error) {
+    console.error('Send message error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Generate public link
+router.post('/:chatId/public-link', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.userId;
+
+    // Check if user owns the chat
+    const chat = await pool.query(
+      'SELECT * FROM chats WHERE id = $1 AND owner_id = $2',
+      [chatId, userId]
+    );
+
+    if (chat.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const publicLink = uuidv4();
+
+    await pool.query(
+      'UPDATE chats SET public_link = $1, is_public = true WHERE id = $2',
+      [publicLink, chatId]
+    );
+
+    res.json({ publicLink });
+  } catch (error) {
+    console.error('Generate public link error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Share with email
+router.post('/:chatId/share', async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { emails } = req.body;
+    const userId = req.user.userId;
+
+    // Check if user owns the chat
+    const chat = await pool.query(
+      'SELECT * FROM chats WHERE id = $1 AND owner_id = $2',
+      [chatId, userId]
+    );
+
+    if (chat.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Share with each email
+    for (const email of emails) {
+      await pool.query(
+        'INSERT INTO chat_shares (chat_id, shared_with_email, shared_by_user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [chatId, email, userId]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Share chat error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Access public chat
+router.post('/public/:publicLink/join', async (req, res) => {
+  try {
+    const { publicLink } = req.params;
+    const userId = req.user.userId;
+
+    const chat = await pool.query(
+      'SELECT * FROM chats WHERE public_link = $1 AND is_public = true',
+      [publicLink]
+    );
+
+    if (chat.rows.length === 0) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    const chatId = chat.rows[0].id;
+
+    // Add user to participants
+    await pool.query(
+      'INSERT INTO chat_participants (chat_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [chatId, userId]
+    );
+
+    // Fetch additional chat details
+    const chatDetails = await pool.query(
+      'SELECT id, title FROM chats WHERE id = $1',
+      [chatId]
+    );
+    const owner = await pool.query(
+      'SELECT username FROM users WHERE id = $1',
+      [chat.rows[0].owner_id]
+    );
+
+    res.json({
+      success: true,
+      chatId: chatId,
+      title: chatDetails.rows[0].title || 'Public Chat',
+      ownerUsername: owner.rows[0]?.username || 'Unknown'
+    });
+  } catch (error) {
+    console.error('Join public chat error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;

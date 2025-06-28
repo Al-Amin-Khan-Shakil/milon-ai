@@ -77,6 +77,9 @@ export const Chat: React.FC = () => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sendMessageTriggered = useRef(false);
 
+  // Define API base URL
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
+
   const headers = useMemo(() => ({
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -130,7 +133,7 @@ export const Chat: React.FC = () => {
 
   const fetchChatData = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/chat/${chatId}`, {
+      const response = await fetch(`${API_URL}/chat/${chatId}`, {
         headers
       });
 
@@ -182,7 +185,7 @@ export const Chat: React.FC = () => {
         return msg ? `${msg.username}: ${msg.content}` : '';
       }).filter(Boolean);
 
-      const response = await fetch(`http://localhost:3001/api/chat/${chatId}/message`, {
+      const response = await fetch(`${API_URL}/chat/${chatId}/message`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -234,7 +237,7 @@ export const Chat: React.FC = () => {
 
   const handleGeneratePublicLink = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/chat/${chatId}/public-link`, {
+      const response = await fetch(`${API_URL}/chat/${chatId}/public-link`, {
         method: 'POST',
         headers
       });
@@ -253,7 +256,7 @@ export const Chat: React.FC = () => {
 
   const handleShareWithEmails = useCallback(async (emails: string[]) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/chat/${chatId}/share`, {
+      const response = await fetch(`${API_URL}/chat/${chatId}/share`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ emails })
