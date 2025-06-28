@@ -30,20 +30,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Define API base URL using environment variable
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
-    
+
     setIsLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await fetch('http://localhost:3001/api/auth/login', {
+    const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,16 +60,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const data = await response.json();
-    
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     setToken(data.token);
     setUser(data.user);
-  }, []);
+  }, [API_URL]);
 
   const register = useCallback(async (username: string, email: string, password: string) => {
-    const response = await fetch('http://localhost:3001/api/auth/register', {
+    const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,13 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const data = await response.json();
-    
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     setToken(data.token);
     setUser(data.user);
-  }, []);
+  }, [API_URL]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
