@@ -196,8 +196,8 @@ router.post('/:chatId/message', async (req, res) => {
       // Fetch specific messages by IDs
       contextResult = await pool.query(
         `SELECT m.content, u.username
-         From messages m
-         JOIN users u ON m.user-id = u.id
+         FROM messages m
+         JOIN users u ON m.user_id = u.id
          WHERE m.chat_id = $1 AND m.id = ANY($2::uuid[])
          ORDER BY m.created_at ASC`,
         [chatId, contextMessageIds]
