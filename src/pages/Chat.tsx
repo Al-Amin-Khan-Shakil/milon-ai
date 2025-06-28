@@ -129,7 +129,7 @@ export const Chat: React.FC = () => {
         socket.off('user-typing', handleUserTyping);
       };
     }
-  }, [chatId, socket, user?.id]);
+  }, [chatId, socket, user?.id, API_URL, messages]);
 
   const fetchChatData = useCallback(async () => {
     try {

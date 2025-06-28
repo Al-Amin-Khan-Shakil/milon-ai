@@ -19,16 +19,39 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
+
+// ADDED: Configure allowed origins for Render deployment
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // https://milon-ai.onrender.com
+  'http://localhost:5173' // For local testing
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    // CHANGED: Dynamic origin handling for CORS
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error(`CORS error: Origin ${origin} not allowed`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
   },
 });
 
 // Middleware
+// CHANGED: Updated CORS middleware for Render
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`Express CORS error: Origin ${origin} not allowed`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
 }));
 app.use(express.json());
 
@@ -40,7 +63,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', authenticateToken, chatRoutes);
 
 // Socket.IO connection handling
-io.on('connection', (socket) => handleSocketConnection(socket, io));
+// ADDED: Logging for WebSocket connections
+io.on('connection', (socket) => {
+  console.log('New WebSocket connection:', socket.id);
+  handleSocketConnection(socket, io);
+});
 
 // Catch-all route for client-side routing
 app.get('*', (req, res) => {

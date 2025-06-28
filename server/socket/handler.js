@@ -4,36 +4,42 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const handleSocketConnection = (socket, io) => {
-
   // Authenticate socket connection
   socket.on('authenticate', (token) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // ADDED: Logging for socket authentication
+      console.log(`Socket authenticated: userId=${decoded.userId}, socketId=${socket.id}`);
       socket.userId = decoded.userId;
       socket.username = decoded.username;
       socket.email = decoded.email;
-
       socket.emit('authenticated', { success: true });
     } catch (error) {
+      // ADDED: Detailed error logging
+      console.error(`Socket auth error: ${error.message}, socketId=${socket.id}`);
       socket.emit('authenticated', { success: false, error: 'Invalid token' });
     }
   });
 
   // Join chat room
   socket.on('join-chat', (chatId) => {
+    // ADDED: Logging for room joining
+    console.log(`User ${socket.userId} joined chat-${chatId}, socketId=${socket.id}`);
     socket.join(`chat-${chatId}`);
   });
 
   // Leave chat room
   socket.on('leave-chat', (chatId) => {
+    // ADDED: Logging for room leaving
+    console.log(`User ${socket.userId} left chat-${chatId}, socketId=${socket.id}`);
     socket.leave(`chat-${chatId}`);
   });
 
   // Handle new messages
   socket.on('new-message', (data) => {
     const { chatId, message } = data;
-
-    // Broadcast to all users
+    // ADDED: Logging for message broadcasting
+    console.log(`Broadcasting message to chat-${chatId}: messageId=${message.id}, socketId=${socket.id}`);
     io.to(`chat-${chatId}`).emit('message-received', {
       ...message,
       username: socket.username
@@ -42,6 +48,8 @@ export const handleSocketConnection = (socket, io) => {
 
   // Handle typing indicators
   socket.on('typing-start', (chatId) => {
+    // ADDED: Logging for typing start
+    console.log(`User ${socket.userId} started typing in chat-${chatId}, socketId=${socket.id}`);
     socket.to(`chat-${chatId}`).emit('user-typing', {
       userId: socket.userId,
       username: socket.username,
@@ -50,6 +58,8 @@ export const handleSocketConnection = (socket, io) => {
   });
 
   socket.on('typing-stop', (chatId) => {
+    // ADDED: Logging for typing stop
+    console.log(`User ${socket.userId} stopped typing in chat-${chatId}, socketId=${socket.id}`);
     socket.to(`chat-${chatId}`).emit('user-typing', {
       userId: socket.userId,
       username: socket.username,
@@ -57,7 +67,8 @@ export const handleSocketConnection = (socket, io) => {
     });
   });
 
+  // ADDED: Logging for disconnections
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log(`User disconnected: socketId=${socket.id}, userId=${socket.userId}`);
   });
 };

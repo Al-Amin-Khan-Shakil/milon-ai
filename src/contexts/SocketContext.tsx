@@ -23,34 +23,47 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { token, user } = useAuth();
 
   // Define Socket.IO URL using environment variable
-  const SOCKET_URL = process.env.REACT_APP_API_URL
-    ? process.env.REACT_APP_API_URL.replace('/api', '')
-    : 'http://localhost:3001';
+  // CHANGED: Updated default port to 10000 to match server
+  const SOCKET_URL = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     if (token && user) {
+      // ADDED: Log Socket.IO URL
+      console.log('Connecting to Socket.IO URL:', SOCKET_URL);
       const newSocket = io(SOCKET_URL, {
         auth: { token }, // Send token during connection
       });
 
       const handleConnect = () => {
+        // ADDED: Log connection
+        console.log('Socket connected:', newSocket.id);
         setIsConnected(true);
         newSocket.emit('authenticate', token);
       };
 
       const handleDisconnect = () => {
+        // ADDED: Log disconnection
+        console.log('Socket disconnected:', newSocket.id);
         setIsConnected(false);
       };
 
       const handleAuthenticated = (data: { success: boolean; error?: string }) => {
+        // ADDED: Log authentication response
+        console.log('Socket authentication response:', data);
         if (!data.success) {
           console.error('Socket authentication failed:', data.error);
         }
       };
 
+      // ADDED: Handle and log connection errors
+      const handleConnectError = (err: Error) => {
+        console.error('Socket connection error:', err.message);
+      };
+
       newSocket.on('connect', handleConnect);
       newSocket.on('disconnect', handleDisconnect);
       newSocket.on('authenticated', handleAuthenticated);
+      newSocket.on('connect_error', handleConnectError);
 
       setSocket(newSocket);
 
@@ -58,6 +71,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         newSocket.off('connect', handleConnect);
         newSocket.off('disconnect', handleDisconnect);
         newSocket.off('authenticated', handleAuthenticated);
+        newSocket.off('connect_error', handleConnectError);
         newSocket.close();
         setSocket(null);
         setIsConnected(false);
