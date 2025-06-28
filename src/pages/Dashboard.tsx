@@ -170,7 +170,12 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <div className='absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50'>
+        <a href="https://bolt.new/" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+          <img src="src\assets\white_circle_360x360.png" alt="Bolt Badge" className="h-16 w-16 md:h-24 md:w-24" />
+        </a>
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <h2 className="text-3xl font-bold text-white">

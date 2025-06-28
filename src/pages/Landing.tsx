@@ -78,7 +78,12 @@ export const Landing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <div className='absolute top-20 right-4 md:top-24 md:right-6 xl:right-12 z-50'>
+        <a href="https://bolt.new/" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+          <img src="src\assets\white_circle_360x360.png" alt="Bolt Badge" className="h-16 w-16 md:h-24 md:w-24" />
+        </a>
+      </div>
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/5 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,7 +128,7 @@ export const Landing: React.FC = () => {
               </div>
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
                 Collaborate with
-                <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent"> AI</span>
+                <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">  Milon AI</span>
                 <br />
                 Like Never Before
               </h1>
@@ -256,10 +261,10 @@ export const Landing: React.FC = () => {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Get Started in
                 <span className="bg-gradient-to-r from-emerald-400 to-blue-600 bg-clip-text text-transparent"> 3 Simple Steps</span>
-              </h2>
+              </h3>
             </motion.div>
           </div>
 
@@ -318,10 +323,10 @@ export const Landing: React.FC = () => {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Loved by
                 <span className="bg-gradient-to-r from-emerald-400 to-blue-600 bg-clip-text text-transparent"> Teams Worldwide</span>
-              </h2>
+              </h3>
             </motion.div>
           </div>
 
@@ -368,10 +373,10 @@ export const Landing: React.FC = () => {
             viewport={{ once: true }}
             className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-3xl p-12 text-center border border-blue-500/30 backdrop-blur-sm"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Ready to Transform Your
               <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent"> AI Collaboration?</span>
-            </h2>
+            </h3>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               Join thousands of teams already using CollabChat AI to enhance their productivity and creativity.
             </p>
