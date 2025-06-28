@@ -78,7 +78,12 @@ export const Landing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <div className='absolute top-20 right-4 md:top-24 md:right-6 xl:right-12 z-50'>
+        <a href="https://bolt.new/" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+          <img src="src\assets\white_circle_360x360.png" alt="Bolt Badge" className="h-16 w-16 md:h-24 md:w-24" />
+        </a>
+      </div>
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/5 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
