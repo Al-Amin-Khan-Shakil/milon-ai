@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
@@ -22,10 +22,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false);
   const { token, user } = useAuth();
 
+  // Define Socket.IO URL using environment variable
+  const SOCKET_URL = process.env.REACT_APP_API_URL
+    ? process.env.REACT_APP_API_URL.replace('/api', '')
+    : 'http://localhost:3001';
+
   useEffect(() => {
     if (token && user) {
-      const newSocket = io('http://localhost:3001');
-      
+      const newSocket = io(SOCKET_URL, {
+        auth: { token }, // Send token during connection
+      });
+
       const handleConnect = () => {
         setIsConnected(true);
         newSocket.emit('authenticate', token);
@@ -56,7 +63,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsConnected(false);
       };
     }
-  }, [token, user]);
+  }, [token, user, SOCKET_URL]);
 
   const contextValue = React.useMemo(() => ({
     socket,
