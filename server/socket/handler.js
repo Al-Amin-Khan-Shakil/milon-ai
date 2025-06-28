@@ -1,11 +1,14 @@
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export const handleSocketConnection = (socket, io) => {
 
   // Authenticate socket connection
   socket.on('authenticate', (token) => {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.userId = decoded.userId;
       socket.username = decoded.username;
       socket.email = decoded.email;
