@@ -29,21 +29,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (token && user) {
       // ADDED: Log Socket.IO URL
-      console.log('Connecting to Socket.IO URL:', SOCKET_URL);
       const newSocket = io(SOCKET_URL, {
         auth: { token }, // Send token during connection
       });
 
       const handleConnect = () => {
         // ADDED: Log connection
-        console.log('Socket connected:', newSocket.id);
         setIsConnected(true);
         newSocket.emit('authenticate', token);
       };
 
       const handleDisconnect = () => {
         // ADDED: Log disconnection
-        console.log('Socket disconnected:', newSocket.id);
         setIsConnected(false);
       };
 
