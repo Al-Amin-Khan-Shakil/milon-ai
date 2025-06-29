@@ -31,14 +31,14 @@ const TabButton = memo<{
 }>(({ tab, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${
+    className={`flex flex-1 items-center justify-center px-6 py-3 rounded-xl font-medium transition-all ${
       isActive
         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
         : 'text-gray-300 hover:text-white hover:bg-white/10'
     }`}
   >
     <tab.icon className="h-5 w-5 mr-2" />
-    {tab.label}
+    <span className='hidden sm:inline-block'>{tab.label}</span>
     {tab.count > 0 && (
       <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
         isActive
@@ -210,7 +210,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 inline-flex border border-white/10">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 flex border border-white/10 w-full max-w-[720px]">
           {tabs.map((tab) => (
             <TabButton
               key={tab.id}
