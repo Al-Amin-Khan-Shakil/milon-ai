@@ -80,7 +80,7 @@ export const Landing: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      <div className="absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50">
+      <div className="absolute top-20 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50">
         <a
           href="https://bolt.new/"
           target="_blank"
