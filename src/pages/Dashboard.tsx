@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { CreateChatModal } from '../components/CreateChatModal';
 import { ChatList } from '../components/ChatList';
+import BoltBadge from '../assets/white_circle_360x360.png';
 
 interface Chat {
   id: number;
@@ -31,14 +32,14 @@ const TabButton = memo<{
 }>(({ tab, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${
+    className={`flex flex-1 items-center justify-center px-6 py-3 rounded-xl font-medium transition-all ${
       isActive
         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
         : 'text-gray-300 hover:text-white hover:bg-white/10'
     }`}
   >
     <tab.icon className="h-5 w-5 mr-2" />
-    {tab.label}
+    <span className='hidden sm:inline-block'>{tab.label}</span>
     {tab.count > 0 && (
       <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
         isActive
@@ -171,9 +172,18 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      <div className='absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50'>
-        <a href="https://bolt.new/" target="_blank" rel="noopener noreferrer" className="cursor-pointer">
-          <img src="src\assets\white_circle_360x360.png" alt="Bolt Badge" className="h-16 w-16 md:h-24 md:w-24" />
+      <div className="absolute top-2 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50">
+        <a
+          href="https://bolt.new/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cursor-pointer"
+        >
+          <img
+            src={BoltBadge}
+            alt="Bolt Badge"
+            className="h-16 w-16 md:h-24 md:w-24"
+          />
         </a>
       </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -210,7 +220,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 inline-flex border border-white/10">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 flex border border-white/10 w-full max-w-[720px]">
           {tabs.map((tab) => (
             <TabButton
               key={tab.id}
