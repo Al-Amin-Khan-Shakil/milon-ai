@@ -423,7 +423,7 @@ export const Landing: React.FC = () => {
               <span className="text-xl font-bold text-white">MilonAI</span>
             </div>
             <div className="text-gray-400 text-sm">
-              © 2025 MilonAI. Crafted by Nexora for seamless group collaboration.
+              © 2025 MilonAI. Crafted by Al Amin Khan Shakil.
             </div>
           </div>
         </div>
