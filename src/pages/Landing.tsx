@@ -14,7 +14,6 @@ import {
   UserPlus,
   Star
 } from 'lucide-react';
-import BoltBadge from '../assets/white_circle_360x360.png';
 
 export const Landing: React.FC = () => {
   const features = [
@@ -80,20 +79,6 @@ export const Landing: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      <div className="absolute top-20 right-4 md:top-32 md:right-6 lg:right-10 xl:top-82 xl:right-14 2xl:top-20 z-50">
-        <a
-          href="https://bolt.new/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="cursor-pointer"
-        >
-          <img
-            src={BoltBadge}
-            alt="Bolt Badge"
-            className="h-16 w-16 md:h-24 md:w-24"
-          />
-        </a>
-      </div>
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/5 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -423,7 +408,7 @@ export const Landing: React.FC = () => {
               <span className="text-xl font-bold text-white">MilonAI</span>
             </div>
             <div className="text-gray-400 text-sm">
-              © 2025 MilonAI. Crafted by Nexora for seamless group collaboration.
+              © 2025 MilonAI. Crafted by Al Amin Khan Shakil.
             </div>
           </div>
         </div>
