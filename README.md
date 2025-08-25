@@ -75,6 +75,9 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
 - **Concurrently** - Run multiple npm scripts simultaneously
 - **Nodemon** - Automatic server restart during development
 
+## 🚀 Live Demo
+- Visit [Milon-AI](https://milon-ai-372h.onrender.com/)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
