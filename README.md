@@ -1,4 +1,4 @@
-# 🤖 Collaborative AI Chat Application
+# 🤖 MilonAI Collaborative AI Chat Application
 
 A modern, full-stack collaborative AI chat application built with React, Node.js, PostgreSQL, and Socket.IO. Create, share, and collaborate on AI conversations in real-time with beautiful UI and seamless user experience.
 
@@ -37,6 +37,15 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
 - **Smooth Animations** - Framer Motion powered transitions and micro-interactions
 - **Dark Theme** - Professional dark interface with proper contrast ratios
 - **Intuitive Interface** - Clean typography and thoughtful spacing throughout
+
+## 🌟 Future Features
+- **Image Prompts** - Upload images to use as visual prompts for AI responses
+- **Voice Prompts** - Speak to the AI with voice input support
+- **Image Responses** - Get AI-generated images as chat responses
+- **Voice Responses** - Receive AI responses as audio output
+
+## 🚀 Live Demo
+- Visit [Milon-AI](https://milon-ai-372h.onrender.com/)
 
 ## 🛠️ Tech Stack
 
@@ -80,8 +89,8 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd collaborative-ai-chat
+   git clone https://github.com/Al-Amin-Khan-Shakil/milon-ai.git
+   cd milon-ai
    ```
 
 2. **Install dependencies**
@@ -92,18 +101,18 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
 3. **Database Setup**
    ```bash
    # Create PostgreSQL database
-   createdb collaborative_chat
-   
+   createdb your_database_name
+
    # Or using psql
    psql -U postgres
-   CREATE DATABASE collaborative_chat;
+   CREATE DATABASE your_database_name;
    ```
 
 4. **Environment Configuration**
    ```bash
    # Copy environment template
    cp .env.example .env
-   
+
    # Edit .env with your configuration
    nano .env
    ```
@@ -113,16 +122,16 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
    # Database Configuration
    DB_HOST=localhost
    DB_PORT=5432
-   DB_NAME=collaborative_chat
-   DB_USER=postgres
+   DB_NAME=your_database_name
+   DB_USER=your-user
    DB_PASSWORD=your_password
-   
+
    # JWT Secret (generate a secure random string)
    JWT_SECRET=your-super-secure-jwt-secret-key
-   
+
    # Google AI API Key
    GOOGLE_AI_API_KEY=your-google-ai-api-key
-   
+
    # Server Port
    PORT=3001
    ```
@@ -131,7 +140,7 @@ A modern, full-stack collaborative AI chat application built with React, Node.js
    ```bash
    # Development mode (starts both client and server)
    npm run dev
-   
+
    # Or start individually
    npm run dev:client  # Frontend only
    npm run dev:server  # Backend only
@@ -280,9 +289,13 @@ The application automatically creates required tables on startup:
 4. **Push to the branch** (`git push origin feature/amazing-feature`)
 5. **Open a Pull Request**
 
-## 📝 License
+## ✍️ Authers
+👤 **Al Amin Khan Shakil**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- GitHub: [Al Amin Khan Shakil](https://github.com/Al-Amin-Khan-Shakil)
+- Twitter: [Al Amin Khan Shakil](https://twitter.com/AlAminKhan85004)
+- LinkedIn: [Al Amin Khan Shakil](https://www.linkedin.com/in/al-amin-khan-shakil/)
+
 
 ## 🙏 Acknowledgments
 
@@ -300,6 +313,10 @@ If you encounter any issues or have questions:
 2. **Create a new Issue** with detailed information
 3. **Include error logs** and steps to reproduce
 4. **Specify your environment** (OS, Node.js version, etc.)
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

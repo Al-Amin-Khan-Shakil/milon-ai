@@ -1,40 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { Chat } from './Chat';
+import dotenv from 'dotenv';
+
+// Load environment variables in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 export const PublicChat: React.FC = () => {
   const { publicLink } = useParams<{ publicLink: string }>();
   const navigate = useNavigate();
   const { token } = useAuth();
   const [isJoining, setIsJoining] = useState(true);
-  const [chatId, setChatId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Define API base URL
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
 
   useEffect(() => {
     const joinPublicChat = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/chat/public/${publicLink}/join`, {
+        const response = await fetch(`${API_URL}/chat/public/${publicLink}/join`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
         });
 
         if (response.ok) {
           const data = await response.json();
-          setChatId(data.chatId.toString());
-          toast.success('Joined public chat successfully!');
+          const { success, chatId, title, ownerUsername } = data;
+          if (success) {
+            toast.success(`Joined ${title || 'Public Chat'} successfully!`);
+            navigate(`/chat/${chatId}`, { state: { title, ownerUsername } });
+          }
         } else {
           const errorData = await response.json();
           setError(errorData.error || 'Failed to join chat');
         }
       } catch (error) {
-        setError('Failed to join chat');
+        setError('Failed to join chat due to a network or server error');
       } finally {
         setIsJoining(false);
       }
@@ -42,15 +52,18 @@ export const PublicChat: React.FC = () => {
 
     if (publicLink && token) {
       joinPublicChat();
+    } else {
+      setIsJoining(false);
+      setError('Authentication required or invalid link');
     }
-  }, [publicLink, token]);
+  }, [publicLink, token, navigate, API_URL]);
 
   if (isJoining) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-white mb-2">Joining Chat...</h2>
+          <h3 className="text-xl font-semibold text-white mb-2">Joining Chat...</h3>
           <p className="text-gray-400">Please wait while we connect you to the chat</p>
         </div>
       </div>
@@ -69,7 +82,7 @@ export const PublicChat: React.FC = () => {
             <div className="p-3 bg-red-500/20 rounded-full w-fit mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-red-400" />
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Unable to Join Chat</h2>
+            <h3 className="text-xl font-semibold text-white mb-2">Unable to Join Chat</h3>
             <p className="text-gray-300 mb-6">{error}</p>
             <button
               onClick={() => navigate('/dashboard')}
@@ -82,11 +95,6 @@ export const PublicChat: React.FC = () => {
         </motion.div>
       </div>
     );
-  }
-
-  if (chatId) {
-    // Render the Chat component with the joined chat ID
-    return <Chat />;
   }
 
   return null;

@@ -1,15 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  MessageCircle, 
-  Users, 
-  Share2, 
-  Sparkles, 
-  ArrowRight, 
-  CheckCircle, 
+import {
+  MessageCircle,
+  Users,
+  Share2,
+  Sparkles,
+  ArrowRight,
   Zap,
-  Globe,
   Lock,
   Bot,
   MessageSquare,
@@ -80,7 +78,7 @@ export const Landing: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/5 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -89,7 +87,7 @@ export const Landing: React.FC = () => {
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl mr-3">
                 <MessageCircle className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">CollabChat AI</span>
+              <span className="text-xl font-bold text-white">MilonAI</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link
@@ -121,17 +119,17 @@ export const Landing: React.FC = () => {
             >
               <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-full border border-blue-500/30 mb-6">
                 <Sparkles className="h-4 w-4 text-blue-400 mr-2" />
-                <span className="text-blue-300 text-sm font-medium">Powered by Advanced AI</span>
+                <span className="text-blue-300 text-sm font-medium">Powered by Gemini</span>
               </div>
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
                 Collaborate with
-                <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent"> AI</span>
+                <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">  Milon AI</span>
                 <br />
                 Like Never Before
               </h1>
               <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Create, share, and collaborate on AI conversations in real-time. 
-                Build smarter solutions together with context-aware AI assistance 
+                Create, share, and collaborate on AI conversations in real-time.
+                Build smarter solutions together with context-aware AI assistance
                 and seamless team collaboration.
               </p>
             </motion.div>
@@ -258,10 +256,10 @@ export const Landing: React.FC = () => {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Get Started in
                 <span className="bg-gradient-to-r from-emerald-400 to-blue-600 bg-clip-text text-transparent"> 3 Simple Steps</span>
-              </h2>
+              </h3>
             </motion.div>
           </div>
 
@@ -320,10 +318,10 @@ export const Landing: React.FC = () => {
               transition={{ duration: 0.8 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Loved by
                 <span className="bg-gradient-to-r from-emerald-400 to-blue-600 bg-clip-text text-transparent"> Teams Worldwide</span>
-              </h2>
+              </h3>
             </motion.div>
           </div>
 
@@ -370,10 +368,10 @@ export const Landing: React.FC = () => {
             viewport={{ once: true }}
             className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 rounded-3xl p-12 text-center border border-blue-500/30 backdrop-blur-sm"
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h3 className="text-4xl md:text-5xl font-bold text-white mb-6">
               Ready to Transform Your
               <span className="bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent"> AI Collaboration?</span>
-            </h2>
+            </h3>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               Join thousands of teams already using CollabChat AI to enhance their productivity and creativity.
             </p>
@@ -407,10 +405,10 @@ export const Landing: React.FC = () => {
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl mr-3">
                 <MessageCircle className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">CollabChat AI</span>
+              <span className="text-xl font-bold text-white">MilonAI</span>
             </div>
             <div className="text-gray-400 text-sm">
-              © 2024 CollabChat AI. Built with ❤️ for better collaboration.
+              © 2025 MilonAI. Crafted by Al Amin Khan Shakil.
             </div>
           </div>
         </div>

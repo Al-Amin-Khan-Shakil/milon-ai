@@ -6,6 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { CreateChatModal } from '../components/CreateChatModal';
 import { ChatList } from '../components/ChatList';
+import dotenv from 'dotenv';
+
+// Load environment variables in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 interface Chat {
   id: number;
@@ -31,20 +37,20 @@ const TabButton = memo<{
 }>(({ tab, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all ${
+    className={`flex flex-1 items-center px-6 py-3 justify-center rounded-xl font-medium transition-all ${
       isActive
         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
         : 'text-gray-300 hover:text-white hover:bg-white/10'
     }`}
   >
     <tab.icon className="h-5 w-5 mr-2" />
-    {tab.label}
+    <span className='hidden sm:inline-block'>{tab.label}</span>
     {tab.count > 0 && (
-      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-        isActive
-          ? 'bg-white/20'
-          : 'bg-white/10'
-      }`}>
+      <span
+        className={`ml-2 px-2 py-1 text-xs rounded-full ${
+          isActive ? 'bg-white/20' : 'bg-white/10'
+        }`}
+      >
         {tab.count}
       </span>
     )}
@@ -64,17 +70,23 @@ export const Dashboard: React.FC = () => {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
 
-  const headers = useMemo(() => ({
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }), [token]);
+  // Define API base URL
+  const API_URL = process.env.REACT_APP_API_URL || '/api';
+
+  const headers = useMemo(
+    () => ({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }),
+    [token]
+  );
 
   const fetchChats = useCallback(async () => {
     try {
       const [myChatsRes, sharedChatsRes, publicChatsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/chat/my-chats', { headers }),
-        fetch('http://localhost:3001/api/chat/shared-with-me', { headers }),
-        fetch('http://localhost:3001/api/chat/joined-public', { headers })
+        fetch(`${API_URL}/chat/my-chats`, { headers }),
+        fetch(`${API_URL}/chat/shared-with-me`, { headers }),
+        fetch(`${API_URL}/chat/joined-public`, { headers }),
       ]);
 
       if (myChatsRes.ok) {
@@ -93,6 +105,7 @@ export const Dashboard: React.FC = () => {
       }
     } catch (error) {
       toast.error('Failed to fetch chats');
+      console.error('Fetch chats error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -102,35 +115,42 @@ export const Dashboard: React.FC = () => {
     fetchChats();
   }, [fetchChats]);
 
-  const handleCreateChat = useCallback(async (title: string) => {
-    try {
-      const response = await fetch('http://localhost:3001/api/chat/create', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ title })
-      });
+  const handleCreateChat = useCallback(
+    async (title: string) => {
+      try {
+        const response = await fetch(`${API_URL}/chat/create`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title }),
+        });
 
-      if (response.ok) {
-        const newChat = await response.json();
-        setMyChats(prev => [newChat, ...prev]);
-        toast.success('Chat created successfully!');
-        navigate(`/chat/${newChat.id}`);
-      } else {
+        if (response.ok) {
+          const newChat = await response.json();
+          setMyChats((prev) => [newChat, ...prev]);
+          toast.success('Chat created successfully!');
+          navigate(`/chat/${newChat.id}`);
+        } else {
+          toast.error('Failed to create chat');
+        }
+      } catch (error) {
         toast.error('Failed to create chat');
+        console.error('Create chat error:', error);
       }
-    } catch (error) {
-      toast.error('Failed to create chat');
-    }
-  }, [headers, navigate]);
+    },
+    [headers, navigate]
+  );
 
   const handleLogout = useCallback(() => {
     logout();
     toast.success('Logged out successfully');
   }, [logout]);
 
-  const handleChatClick = useCallback((chatId: number) => {
-    navigate(`/chat/${chatId}`);
-  }, [navigate]);
+  const handleChatClick = useCallback(
+    (chatId: number) => {
+      navigate(`/chat/${chatId}`);
+    },
+    [navigate]
+  );
 
   const handleTabClick = useCallback((tabId: TabType) => {
     setActiveTab(tabId);
@@ -144,18 +164,35 @@ export const Dashboard: React.FC = () => {
     setIsCreateModalOpen(false);
   }, []);
 
-  const tabs = useMemo(() => [
-    { id: 'my', label: 'My Chats', icon: MessageCircle, count: myChats.length },
-    { id: 'shared', label: 'Shared With Me', icon: Share2, count: sharedChats.length },
-    { id: 'public', label: 'Joined Public', icon: Users, count: publicChats.length }
-  ], [myChats.length, sharedChats.length, publicChats.length]);
+  const tabs = useMemo(
+    () => [
+      { id: 'my', label: 'My Chats', icon: MessageCircle, count: myChats.length },
+      {
+        id: 'shared',
+        label: 'Shared With Me',
+        icon: Share2,
+        count: sharedChats.length,
+      },
+      {
+        id: 'public',
+        label: 'Joined Public',
+        icon: Users,
+        count: publicChats.length,
+      },
+    ],
+    [myChats.length, sharedChats.length, publicChats.length]
+  );
 
   const getCurrentChats = useCallback(() => {
     switch (activeTab) {
-      case 'my': return myChats;
-      case 'shared': return sharedChats;
-      case 'public': return publicChats;
-      default: return myChats;
+      case 'my':
+        return myChats;
+      case 'shared':
+        return sharedChats;
+      case 'public':
+        return publicChats;
+      default:
+        return myChats;
     }
   }, [activeTab, myChats, sharedChats, publicChats]);
 
@@ -170,14 +207,14 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
+        <h2 className="text-3xl font-bold text-white">
+          Welcome back, {user?.username}!
+        </h2>
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Welcome back, {user?.username}!
-            </h1>
             <p className="text-gray-300">
               Manage your AI conversations and collaborations
             </p>
@@ -189,8 +226,8 @@ export const Dashboard: React.FC = () => {
               onClick={handleOpenCreateModal}
               className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              New Chat
+              <Plus className="h-5 w-5 md:mr-2" />
+              <span className="hidden md:inline-block">New Chat</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -198,14 +235,14 @@ export const Dashboard: React.FC = () => {
               onClick={handleLogout}
               className="inline-flex items-center px-4 py-2 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all border border-white/20"
             >
-              <LogOut className="h-5 w-5 mr-2" />
-              Logout
+              <LogOut className="h-5 w-5 md:mr-2" />
+              <span className="hidden md:inline-block">Logout</span>
             </motion.button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 inline-flex border border-white/10">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-1 mb-8 inline-flex border border-white/10 w-full max-w-[720px]">
           {tabs.map((tab) => (
             <TabButton
               key={tab.id}

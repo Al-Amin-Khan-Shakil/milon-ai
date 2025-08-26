@@ -1,13 +1,9 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../database/init.js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 
 const router = express.Router();
-
-// Initialize Google AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 // Create new chat
 router.post('/create', async (req, res) => {
@@ -33,11 +29,11 @@ router.get('/my-chats', async (req, res) => {
     const userId = req.user.userId;
 
     const result = await pool.query(
-      `SELECT c.*, 
+      `SELECT c.*,
         (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
         (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-       FROM chats c 
-       WHERE c.owner_id = $1 
+       FROM chats c
+       WHERE c.owner_id = $1
        ORDER BY c.updated_at DESC`,
       [userId]
     );
@@ -58,10 +54,10 @@ router.get('/shared-with-me', async (req, res) => {
       `SELECT c.*, u.username as owner_username,
         (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
         (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-       FROM chats c 
+       FROM chats c
        JOIN chat_shares cs ON c.id = cs.chat_id
        JOIN users u ON c.owner_id = u.id
-       WHERE cs.shared_with_email = $1 
+       WHERE cs.shared_with_email = $1
        ORDER BY c.updated_at DESC`,
       [userEmail]
     );
@@ -82,7 +78,7 @@ router.get('/joined-public', async (req, res) => {
       `SELECT c.*, u.username as owner_username,
         (SELECT COUNT(*) FROM messages WHERE chat_id = c.id) as message_count,
         (SELECT content FROM messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-       FROM chats c 
+       FROM chats c
        JOIN chat_participants cp ON c.id = cp.chat_id
        JOIN users u ON c.owner_id = u.id
        WHERE cp.user_id = $1 AND c.owner_id != $1 AND c.is_public = true
@@ -110,7 +106,7 @@ router.get('/:chatId', async (req, res) => {
        FROM chats c
        JOIN users u ON c.owner_id = u.id
        WHERE c.id = $1 AND (
-         c.owner_id = $2 OR 
+         c.owner_id = $2 OR
          c.is_public = true OR
          EXISTS (SELECT 1 FROM chat_shares WHERE chat_id = $1 AND shared_with_email = $3)
        )`,
@@ -123,10 +119,10 @@ router.get('/:chatId', async (req, res) => {
 
     // Get messages with user information
     const messages = await pool.query(
-      `SELECT m.*, u.username 
+      `SELECT m.*, u.username
        FROM messages m
        JOIN users u ON m.user_id = u.id
-       WHERE m.chat_id = $1 
+       WHERE m.chat_id = $1
        ORDER BY m.created_at ASC`,
       [chatId]
     );
@@ -145,16 +141,37 @@ router.get('/:chatId', async (req, res) => {
 router.post('/:chatId/message', async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { content, contextMessages = [] } = req.body;
+    const { content, contextMessageIds = [] } = req.body;
     const userId = req.user.userId;
     const userEmail = req.user.email;
 
+    // Validate input
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: 'Invalid content' });
+    }
+
+    if (!Array.isArray(contextMessageIds)) {
+      return res.status(400).json({ error: 'contextMessageIds must be an array' });
+    }
+
+    // Fetch username
+    const userResult = await pool.query(
+      'SELECT username FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const currentUsername = userResult.rows[0].username;
+
     // Check access permissions
     const accessCheck = await pool.query(
-      `SELECT * FROM chats 
-       WHERE id = $1 AND (
-         owner_id = $2 OR 
-         is_public = true OR
+      `SELECT * FROM chats c
+       WHERE c.id = $1 AND (
+         c.owner_id = $2 OR
+         c.is_public = true OR
          EXISTS (SELECT 1 FROM chat_shares WHERE chat_id = $1 AND shared_with_email = $3)
        )`,
       [chatId, userId, userEmail]
@@ -170,6 +187,54 @@ router.post('/:chatId/message', async (req, res) => {
       [chatId, userId]
     );
 
+    // Fetch context messages
+    let contextMessages = [];
+    let contextResult;
+
+    if (contextMessageIds.length > 0) {
+
+      // Fetch specific messages by IDs
+      contextResult = await pool.query(
+        `SELECT m.content, u.username
+         FROM messages m
+         JOIN users u ON m.user_id = u.id
+         WHERE m.chat_id = $1 AND m.id = ANY($2::uuid[])
+         ORDER BY m.created_at ASC`,
+        [chatId, contextMessageIds]
+      );
+
+      contextMessages = contextResult.rowCount > 0
+        ? contextResult.rows.map(row => `${row.username}: ${row.content}`)
+        : [];
+    } else {
+
+      // Fetch last 12 messages
+      contextResult = await pool.query(
+        `SELECT m.content, u.username
+         FROM messages m
+         JOIN users u ON m.user_id = u.id
+         WHERE m.chat_id = $1
+         ORDER BY m.created_at DESC
+         LIMIT 12`,
+        [chatId]
+      );
+
+      // Reverse to maintain chronological order
+      contextMessages = contextResult.rowCount > 0
+        ? contextResult.rows.map(row => `${row.username}: ${row.content}`).reverse()
+        : [];
+    }
+
+    // Analyze context for different users
+    let contextNote = '';
+    if (contextMessages.length > 0 && contextResult.rowCount > 0) {
+      const contextUsernames = [...new Set(contextResult.rows.map(row => row.username))]; // Unique usernames
+      const otherUsers = contextUsernames.filter(username => username !== currentUsername);
+      if (otherUsers.length > 0) {
+        contextNote = `\nNote: The context includes messages from other users: ${otherUsers.join(', ')}. Mention specific users in your response only when necessary for clarity or relevance, based on the user's intent.`;
+      }
+    }
+
     // Save user message
     const userMessage = await pool.query(
       'INSERT INTO messages (chat_id, user_id, content, context_messages) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -178,14 +243,26 @@ router.post('/:chatId/message', async (req, res) => {
 
     // Generate AI response
     try {
-      let prompt = content;
-      if (contextMessages.length > 0) {
-        prompt = `Context: ${contextMessages.join('\n\n')}\n\nUser question: ${content}`;
-      }
+      // Structure the prompt for Google AI
+      const contents = [
+        {
+          parts: [
+            {
+              text: contextMessages.length > 0
+                ? `Context:\n${contextMessages.join('\n\n')}${contextNote}\n\n${currentUsername} asks: ${content}`
+                : `${currentUsername} asks: ${content}`
+            }
+          ]
+        }
+      ];
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const aiResponse = response.text();
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`,
+        { contents },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      const aiResponse = response.data.candidates[0].content.parts[0].text;
 
       // Save AI response
       const aiMessage = await pool.query(
@@ -199,22 +276,30 @@ router.post('/:chatId/message', async (req, res) => {
         [chatId]
       );
 
+      // Fetch usernames for response
+      const userMessageWithUsername = {
+        ...userMessage.rows[0],
+        username: currentUsername
+      };
+      const aiMessageWithUsername = {
+        ...aiMessage.rows[0],
+        username: currentUsername
+      };
+
       res.json({
-        userMessage: userMessage.rows[0],
-        aiMessage: aiMessage.rows[0]
+        userMessage: userMessageWithUsername,
+        aiMessage: aiMessageWithUsername
       });
     } catch (aiError) {
-      console.error('AI generation error:', aiError);
-      
-      // Save error message
+      console.error('AI generation error:', aiError.response?.data || aiError.message, aiError.stack);
       const errorMessage = await pool.query(
         'INSERT INTO messages (chat_id, user_id, content, message_type) VALUES ($1, $2, $3, $4) RETURNING *',
-        [chatId, userId, 'I apologize, but I encountered an error generating a response. Please make sure your Google AI API key is configured correctly.', 'ai']
+        [chatId, userId, 'I apologize, but I encountered an error generating a response. Please check your Google AI API configuration.', 'ai']
       );
 
       res.json({
-        userMessage: userMessage.rows[0],
-        aiMessage: errorMessage.rows[0]
+        userMessage: { ...userMessage.rows[0], username: currentUsername },
+        aiMessage: { ...errorMessage.rows[0], username: currentUsername }
       });
     }
   } catch (error) {
@@ -308,7 +393,22 @@ router.post('/public/:publicLink/join', async (req, res) => {
       [chatId, userId]
     );
 
-    res.json({ chatId });
+    // Fetch additional chat details
+    const chatDetails = await pool.query(
+      'SELECT id, title FROM chats WHERE id = $1',
+      [chatId]
+    );
+    const owner = await pool.query(
+      'SELECT username FROM users WHERE id = $1',
+      [chat.rows[0].owner_id]
+    );
+
+    res.json({
+      success: true,
+      chatId: chatId,
+      title: chatDetails.rows[0].title || 'Public Chat',
+      ownerUsername: owner.rows[0]?.username || 'Unknown'
+    });
   } catch (error) {
     console.error('Join public chat error:', error);
     res.status(500).json({ error: 'Internal server error' });
